@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+echo "Running linter"
+npx lint-staged

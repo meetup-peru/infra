@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+
+# Make sure temporary commits are not pushed
+local=$(git rev-parse HEAD)
+remote=$(git for-each-ref refs/remotes/origin --sort="-committerdate" | head -1 | awk '{ print $1 }')
+
+tmp_commits=$(git log $remote..$local --pretty=format:"%s" | grep "^tmp\s")
+if [ -n "$tmp_commits" ]; then
+  echo "❌ You cannot push temporary commits (commits beginning with \"tmp\")."
+  exit 1
+fi
+
+master="main"
+develop="dev"
+
+origin_master="origin/${master}"
+origin_develop="origin/${develop}"
+
+YELLOW="\033[0;33m"
+NC="\033[0m" # No Color
+GREEN="\033[0;32m"
+
+git fetch --all
+
+branch_regex="^(feature|hotfix|bugfix)\/([A-Z]{2,}-[0-9]{1,4})_.*"
+
+current_branch=$(git rev-parse --abbrev-ref HEAD)
+
+if echo $current_branch | grep -E $branch_regex ; then
+  echo "✅ Branch name is valid."
+else
+  printf "
+    ❌ Invalid branch name.
+    Make sure your branch follows the correct pattern.
+    E.g. \"${YELLOW}feature/SCRUM-1234_My-awsome-branch${NC}\".
+    Mind the dashes and underscores."
+  exit 1
+fi
+
+parent=$(git show-branch -a | grep '*' | grep -v "$current_branch" | head -n1 | sed 's/.*\[\(.*\)\].*/\1/' | sed 's/[\^~].*//')
+num_changes=$(git rev-list --left-right --count origin/$parent...@ | cut -f1)
+
+if [[ ("$parent" == "$master" || "$parent" == "$develop") && "$num_changes" > 0 ]]; then
+  echo "❌ origin/$parent has $num_changes new change(s). Please rebase before committing."
+  exit 1
+else
+  echo "✅ origin/$parent does not have any new changes"
+fi
+
+exit 0
+
