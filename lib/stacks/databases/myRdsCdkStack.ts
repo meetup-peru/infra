@@ -14,11 +14,7 @@ export class MyRdsCdkStack extends cdk.Stack {
     // Define an RDS instance
     new rds.DatabaseInstance(this, "MyRdsInstance", {
       engine: rds.DatabaseInstanceEngine.POSTGRES,
-      instanceType: ec2.InstanceType.of(
-        ec2.InstanceClass.M5,
-        // eslint-disable-next-line comma-dangle
-        ec2.InstanceSize.LARGE
-      ),
+      instanceType: ec2.InstanceType.of(ec2.InstanceClass.M5, ec2.InstanceSize.LARGE),
       vpc,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
