@@ -1,0 +1,128 @@
+#!/usr/bin/env bash
+
+YELLOW='\033[0;33m'
+UNDERLINE="\e[4m"
+NC='\033[0m' # No Color
+
+follow_branch_pattern="
+    Make sure your branch follows the correct pattern.
+    E.g. '${YELLOW}feature/SCRUM-1234_My-awsome-branch-description${NC}'.
+    Mind the dashes and underscores.
+"
+
+function print_error {
+  local MESSAGE=$1
+  local BLINKER="🚨"
+
+  printf "
+    ${BLINKER} ${MESSAGE}
+    ${follow_branch_pattern}"
+}
+
+function escape_slashes {
+    sed 's/\//\\\//g'
+}
+
+function replace_slashes {
+    sed 's/\//\-/g'
+}
+
+function remove_non_word_characters {
+  sed 's/^\W*//g'
+}
+
+function change_line {
+    local MSG=$1;
+    local REPLACEMENT=$2;
+    local FILE=$3
+
+    local MSG_ESCAPED=$(echo "${MSG}" | escape_slashes)
+
+    echo $REPLACEMENT > $FILE
+    echo $body >> $FILE
+}
+
+function remove_branch_n_issue {
+  local branch_type=$1
+  local jira_issue=$2
+
+  sed 's/'"$branch_type"'//g'
+
+  sed 's/'"$jira_issue"'//g'
+  sed 's/^\///g'
+}
+
+# Include any branches for which you wish to disable this script
+if [[ -z "$branches_to_skip" ]]; then
+  branches_to_skip=(main dev)
+fi
+
+commit_file="$1"
+msg=$(head -n1 "$commit_file")
+body=$(tail -n +2 "$commit_file")
+
+if echo $msg | grep -E "^Merge" ; then
+  exit 0
+fi
+
+if [[ -z "$msg" ]]; then
+  exit 0
+fi
+
+if echo $msg | grep -E "^Merge" ; then
+  exit 0
+fi
+
+branch_name=$( (git symbolic-ref --short HEAD || git rev-parse --abbrev-ref HEAD) 2> /dev/null )
+
+if [[ "$branch_name" = "HEAD" ]]; then # Could not fetch branch name. Skip message formatting.
+  exit 0
+fi
+
+branch_excluded=$(printf "%s\n" "${branches_to_skip[@]}" | grep -c "^$branch_name$")
+
+if [[ "$branch_excluded" -eq 1 ]]; then # No commit message changes
+  exit 0
+fi
+
+[[ $branch_name =~ ^(feature|bugfix|hotfix)\/([A-Z]{2,}-[0-9]{1,4}).*$ ]]
+
+branch_type=${BASH_REMATCH[1]}
+jira_issue=${BASH_REMATCH[2]}
+
+if [[ "$branch_type" = "" ]]; then
+  print_error "Branch type not found. It can be one of [feature, hotfix, bugfix]."
+  exit 1
+fi
+
+if [[ "$jira_issue" = "" ]]; then
+  print_error "JIRA issue id not found."
+  exit 1
+fi
+
+if [[ "$branch_type/$jira_issue" = "$branch_name" ]]; then
+  print_error "Branch name can not include only jira issue. Consider to add some description."
+  exit 1
+fi
+
+if [[ "$msg" = "" ]]; then
+  print_error "Message can not be empty. Consider to add some description."
+  exit 1
+fi
+
+[[ $msg =~ [^(\/|:|\b)]+$ ]]
+
+# Temporary commit
+if echo $msg | grep "^tmp\s" ; then
+  echo "Temporary commit. Exiting..."
+  exit 0
+fi
+
+normalized_msg=$(echo $msg | sed 's/'"$branch_type"'//g' | sed 's/'"$jira_issue"'//g' | remove_non_word_characters  | sed 's/^\s*//g' | replace_slashes )
+
+# Build commit message
+commit_msg="$branch_type($jira_issue): $normalized_msg"
+
+printf "Commit ${UNDERLINE}$branch_type${NC} for ${UNDERLINE}$jira_issue${NC}: $normalized_msg\n"
+
+change_line "$msg" "$commit_msg" "$commit_file"

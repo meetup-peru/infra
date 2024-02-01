@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+
+msg=`head -n1 $1`
+
+if [[ -z "$msg" ]]; then
+  exit 0
+fi
+
+git_author=$(git var GIT_AUTHOR_IDENT)
+
+echo "Commit author: $git_author"
+
+tmp_commit_regex="^tmp\s"
+commit_message_regex="(^(feature|bugfix|hotfix)\([A-Z]{2,}-[0-9]{1,4}\):\s[a-zA-Z0-9].{1,49}$|^Merge)"
+
+# Temporary commit
+if echo $msg | grep $tmp_commit_regex ; then
+  echo "Temporary commit. Exiting..."
+  exit 0
+
+# Checking if commit message has correct format
+elif echo $msg | grep -E $commit_message_regex ; then
+  exit 0
+else
+  YELLOW="\033[0;33m"
+  NC="\033[0m" # No Color
+  printf "
+    🚨 Commit mesage is in the wrong format.
+    It must not be longer than 50 characters and have the following format:
+    ${YELLOW}<issue type>(<jira issue number>): Some commit message.${NC}
+    If you want to make a temporary commit, type \"tmp\" in the beginning of your commit message.
+    Temporary commits cannot be pushed.
+"
+  exit 1
+fi
