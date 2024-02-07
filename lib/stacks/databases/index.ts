@@ -1,1 +1,1 @@
-export * from "./myRdsCdkStack";
+export * from "./RdsCdkStack";
