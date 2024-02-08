@@ -20,7 +20,7 @@
     "@types/source-map-support": "^0.5.6",
     "@typescript-eslint/eslint-plugin": "^5.44.0",
     "@typescript-eslint/parser": "^5.44.0",
-    "aws-cdk": "^2.87.0",
+    "aws-cdk": "2.126.0",
     "eslint": "^8.28.0",
     "eslint-config-prettier": "^8.5.0",
     "eslint-plugin-no-null": "^1.0.2",
@@ -31,9 +31,7 @@
     "typescript": "~3.9.7"
   },
   "dependencies": {
-    "@aws-cdk/aws-lambda-python-alpha": "^2.87.0-alpha.0",
-    "@aws-cdk/core": "^1.19.0",
-    "aws-cdk-lib": "^2.87.0",
+    "aws-cdk-lib": "2.126.0",
     "constructs": "^10.1.211",
     "esbuild": "0.17.5",
     "lint-staged": "^15.2.1",
